@@ -11,6 +11,7 @@ classdef LogMsgGroup < dynamicprops & matlab.mixin.Copyable
         typeNumID = -1; % Numerical ID of message type (e.g. 128=FMT, 129=PARM, 130=GPS, etc.)
         fieldUnits = struct();
         fieldMultipliers = struct();
+        fieldNamesOriginal = {}; % Cell-array for storing the original order of the variables
         name = ''; % Human readable name of msg group
         LineNo = [];
     end
@@ -40,6 +41,9 @@ classdef LogMsgGroup < dynamicprops & matlab.mixin.Copyable
                 obj = []; % Clear the instance and return %TODO this is kind of messy
                 return
             end
+            
+            % Store the original field name order
+            obj.fieldNamesOriginal = obj.fieldNameCell;
             
             % For each of the fields
             for ndx = 1:length(obj.fieldNameCell)
