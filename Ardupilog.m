@@ -545,12 +545,12 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
                     end
                     
                     % Order the fields as per their original order
-                    idx = dump.(propName).fieldNamesOriginal;
-                    idx = [{'typeNumID'},{'fieldUnits'},{'fieldMultipliers'},{'fieldNamesOriginal'},{'name'},{'LineNo'},{'TimeS'},{'DatenumUTC'},idx];
-                    
+                    idx = fieldnames(dump.(propName));
+                    idx(end-numel(dump.(propName).fieldNamesOriginal)+1:end) = dump.(propName).fieldNamesOriginal;
+         
                     dump.(propName) = orderfields(dump.(propName),idx);
 
-                    % remove the original order struct element
+                    % rRmove the original order struct element
                     dump.(propName) = rmfield(dump.(propName),'fieldNamesOriginal');
                     
                 end
