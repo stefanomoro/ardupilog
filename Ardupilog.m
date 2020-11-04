@@ -553,6 +553,9 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
                     % rRmove the original order struct element
                     dump.(propName) = rmfield(dump.(propName),'fieldNamesOriginal');
                     
+                    % Remove the others we don't need
+                    % try; dump.(propName) = rmfield(dump.(propName),'LineNo'); end;
+                    % try; dump.(propName) = rmfield(dump.(propName),'TimeUS'); end;
                 end
             end
         end
