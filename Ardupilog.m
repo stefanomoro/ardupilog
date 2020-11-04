@@ -463,6 +463,7 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
                 %  Ref: https://confluence.qps.nl/display/KBE/UTC+to+GPS+Time+Correction
                 gps_zero_datenum = datenum('1980-01-06 00:00:00.000','yyyy-mm-dd HH:MM:SS.FFF');
                 days_since_gps_zero = recv_GWk*7 + recv_GMS/1e3/60/60/24;
+                if isempty(days_since_gps_zero); days_since_gps_zero = 0; end;
                 recv_gps_datenum = gps_zero_datenum + days_since_gps_zero;
                 % Adjust for leap seconds (disagreement between GPS and UTC)
                 leap_second_table = datenum(...
@@ -484,7 +485,7 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
                      'Jul 01 2012'
                      'Jul 01 2015'
                      'Jan 01 2017'], 'mmm dd yyyy');
-                leapseconds = sum(recv_gps_datenum > leap_second_table);
+                try; leapseconds = sum(recv_gps_datenum > leap_second_table); catch; keyboard; end
                 recv_utc_datenum = recv_gps_datenum - leapseconds/60/60/24;
                 % Record adjusted time to the log's property
                 obj.bootDatenumUTC = recv_utc_datenum - recv_timeUS/1e6/60/60/24;
