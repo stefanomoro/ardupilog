@@ -541,6 +541,7 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
                 propName = props{i};
                 if ~isa(obj.(propName),'LogMsgGroup') % This is not a LogMsgGroup
                     dump.(propName) = obj.(propName);
+                    n_props = i;
                 elseif ~isvalid(obj.(propName))
                     % This is a handle to a deleted LogMsgGroup.
                     % Ignore it and do nothing.
@@ -569,6 +570,13 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
                     % try; dump.(propName) = rmfield(dump.(propName),'TimeUS'); end;
                 end
             end
+        
+            % Sort the output fields alphabetically
+            % Data starts at index 11 (n_props+1), rest is file info
+            fields = fieldnames(dump);
+            [~,idx] = sort(fields(n_props+1:end));
+            idx = [[1:n_props]'; idx+n_props];
+            dump = orderfields(dump,idx);
         end
 
         function slice = getSlice(obj, slice_values, slice_type)
