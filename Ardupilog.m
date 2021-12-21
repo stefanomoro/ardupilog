@@ -358,6 +358,7 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
             for fmtIdx = 1:length(fmtTypes)
                 msgId = fmtTypes(fmtIdx);
                 msgIdx = find(msgIds==msgId, 1, 'first');
+                if (isempty(msgIdx)); break; end              % Something is wrong with this msgIdx, skip it
                 msgName = obj.msgsContained{msgIdx};
                 currentUnitIds = trimTail(unitIds(fmtIdx,:));
                 currentMultIds = trimTail(multIds(fmtIdx,:));
