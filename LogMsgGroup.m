@@ -14,16 +14,21 @@ classdef LogMsgGroup < dynamicprops & matlab.mixin.Copyable
         fieldNamesOriginal = {}; % Cell-array for storing the original order of the variables
         name = ''; % Human readable name of msg group
         LineNo = [];
+        MsgInstance = 0; % Some messages refer to multiple instances of the same format.
     end
     properties (Dependent = true)
         TimeS; % Time in seconds since boot.
         DatenumUTC; % MATLAB datenum of UTC Time at boot
     end
+    
     methods
-        function obj = LogMsgGroup(type_num, type_name, data_length, format_string, field_names_string)
+        function obj = LogMsgGroup(type_num, type_name, data_length, format_string, field_names_string, instance)
             if nargin == 0
                 % This is an empty constructor, MATLAB requires it to exist
                 return
+            end
+            if nargin > 5 % instance was passed
+                obj.MsgInstance = instance;
             end
             obj.storeFormat(type_num, type_name, data_length, format_string, field_names_string);
         end
@@ -252,6 +257,20 @@ classdef LogMsgGroup < dynamicprops & matlab.mixin.Copyable
         function datenumUTC = get.DatenumUTC(obj)
             datenumUTC = obj.bootDatenumUTC + obj.TimeS/60/60/24;
         end
+        
+        function [answer, instanceFieldName] = isInstanced(obj)
+            answer = false;
+            instanceFieldName = '';
+            units = fieldnames(obj.fieldUnits);
+            for unit=units'
+                unitname = unit{1};
+                type = obj.fieldUnits.(unitname);
+                if strcmp(type, 'instance')
+                    answer = true;
+                    instanceFieldName = unitname;
+                end
+            end
+        end
 
         function [slice, remainder] = getSlice(obj, slice_values, slice_type)
         % This returns an indexed portion (a "slice") of a LogMsgGroup
@@ -265,15 +284,23 @@ classdef LogMsgGroup < dynamicprops & matlab.mixin.Copyable
                 % Find indices corresponding to slice_values, from slice_type
                 switch slice_type
                   case 'LineNo'
-                    start_ndx = find(obj.LineNo >= slice_values(1),1,'first');
-                    end_ndx = find(obj.LineNo <= slice_values(2),1,'last');
+                      start_ndx = find(obj.LineNo >= slice_values(1),1,'first');
+                      end_ndx = find(obj.LineNo <= slice_values(2),1,'last');
+                      slice_ndx = start_ndx:1:end_ndx;
                   case 'TimeS'
-                    start_ndx = find(obj.TimeS >= slice_values(1),1,'first');
-                    end_ndx = find(obj.TimeS <= slice_values(2),1,'last');
+                      start_ndx = find(obj.TimeS >= slice_values(1),1,'first');
+                      end_ndx = find(obj.TimeS <= slice_values(2),1,'last');
+                      slice_ndx = start_ndx:1:end_ndx;
+                  case 'MsgInstance'
+                      targetInstance = slice_values;
+                      [isInstanced, instanceFieldName] = obj.isInstanced();
+                      if ~isInstanced
+                          error('Message does not support instances');
+                      end
+                      slice_ndx = find(obj.(instanceFieldName)==targetInstance);
                   otherwise
-                    error(['Unsupported slice type: ', slice_type]);
+                      error(['Unsupported slice type: ', slice_type]);
                 end
-                slice_ndx = [start_ndx:1:end_ndx];
             else
                 slice_ndx = [];
             end
@@ -288,7 +315,7 @@ classdef LogMsgGroup < dynamicprops & matlab.mixin.Copyable
             
             % Create the slice as a new LogMsgGroup
             field_names_string = strjoin(obj.fieldNameCell,',');
-            slice = LogMsgGroup(obj.typeNumID, obj.name, obj.data_len, obj.format, field_names_string);
+            slice = LogMsgGroup(obj.typeNumID, obj.name, obj.data_len, obj.format, field_names_string, obj.MsgInstance);
             % For each data field, copy the slice of data, identified by slice_ndx
             for field_name = slice.fieldNameCell
                 % HGM: The following is valid for 1-dim and 2-dim fields.
@@ -301,6 +328,8 @@ classdef LogMsgGroup < dynamicprops & matlab.mixin.Copyable
             % Copy also the LineNo slice and set the bootDatenum
             slice.setLineNo(obj.LineNo(slice_ndx));
             slice.setBootDatenumUTC(obj.bootDatenumUTC);
+            slice.fieldUnits = obj.fieldUnits;
+            slice.fieldMultipliers = obj.fieldMultipliers;
         end
     end
     methods(Access=protected)
