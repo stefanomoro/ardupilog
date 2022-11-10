@@ -82,7 +82,10 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
             if ~isnan(obj.bootDatenumUTC)
                 for prop = properties(obj)'
                     if isa(obj.(prop{1}), 'LogMsgGroup')
-                        obj.(prop{1}).setBootDatenumUTC(obj.bootDatenumUTC);
+                        for ii = 1:numel(obj.(prop{1}))
+%                         keyboard
+                        obj.(prop{1})(ii).setBootDatenumUTC(obj.bootDatenumUTC);
+                        end
                     end
                 end
             end
@@ -224,7 +227,9 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
             for i = 1:length(propNames)
                 propName = propNames{i};
                 if isa(obj.(propName),'LogMsgGroup')
-                    obj.numMsgs = obj.numMsgs + length(obj.(propName).LineNo);
+                    for jj = 1:numel(obj.(propName))
+                        obj.numMsgs = obj.numMsgs + length(obj.(propName)(jj).LineNo);
+                    end
                 end
             end
             
@@ -354,25 +359,23 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
             instances = unique(logMsgGroup.(instanceFieldName));
             if length(instances)>1
                 allMessages = copy(logMsgGroup);
-                firstInstance = true;
+                instance_counter = 1;
+               
                 for instance = instances'
-                    if firstInstance
-                        msgName = logMsgGroup.name;
-                    else
-                        msgName = obj.buildMsgInstanceName(logMsgGroup.name, instance);
-                    end
-                    % Isolate the messages that refer to the current
-                    % instance
+
+                    msgName = logMsgGroup.name;
+
+                    % Isolate the messages that refer to the current instance
                     new_msg_group = allMessages.getSlice(instance, 'MsgInstance');
-                    if ~firstInstance
-                        addprop(obj, msgName);
-                        obj.msgsContained{end+1} = msgName;
+
+                    if (instance_counter == 1)
+                        obj.(msgName) = new_msg_group;
+                    else
+                        obj.(msgName) = [obj.(msgName),new_msg_group];
                     end
-                    obj.(msgName) = new_msg_group;
-                    obj.(msgName).MsgInstance = instance;
-                    if firstInstance
-                        firstInstance = false;
-                    end
+
+                    instance_counter = instance_counter + 1;
+
                 end
             end
         end
@@ -549,8 +552,9 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
                      'Jul 01 2012'
                      'Jul 01 2015'
                      'Jan 01 2017'], 'mmm dd yyyy');
-                try; leapseconds = sum(recv_gps_datenum > leap_second_table); catch; keyboard; end
+                try leapseconds = sum(recv_gps_datenum > leap_second_table); catch; keyboard; end
                 recv_utc_datenum = recv_gps_datenum - leapseconds/60/60/24;
+
                 % Record adjusted time to the log's property
                 obj.bootDatenumUTC = recv_utc_datenum - recv_timeUS/1e6/60/60/24;
 
@@ -603,24 +607,39 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
                     end
                 else
                     % This is a LogMsgGroup
-                    subProps = properties(obj.(propName));
-                    for j = 1:length(subProps)
-                        subPropName = subProps{j};
-                        dump.(propName).(subPropName) = obj.(propName).(subPropName);
+                    % Loop through as it may be instanced
+                    for jj = 1:numel(obj.(propName))
+                        subProps = properties(obj.(propName)(jj));
+    
+                        % Check we actually have data in this field
+                        if isempty(obj.(propName)(jj).LineNo)
+                            fprintf('\tRemoving empty field %s\n',propName);
+                            continue
+                        end
+    
+                        % Creat the output structure
+                        for j = 1:length(subProps)
+                            subPropName = subProps{j};
+                            dump.(propName)(jj).(subPropName) = obj.(propName)(jj).(subPropName);
+                        end
+                        
+                        % Order the fields as per their original order in the log
+                        idx = fieldnames(dump.(propName)(jj));
+                        idx(end-numel(dump.(propName)(jj).fieldNamesOriginal)+1:end) = dump.(propName)(jj).fieldNamesOriginal;
+             
+                        try % This could be done better, just ignores if breaks...
+                            dump.(propName)(jj) = orderfields(dump.(propName)(jj),idx);
+                        catch
+                            % Ordering the fields failed for some reason
+                            keyboard
+                        end 
+                           
                     end
-                    
-                    % Order the fields as per their original order in the log
-                    idx = fieldnames(dump.(propName));
-                    idx(end-numel(dump.(propName).fieldNamesOriginal)+1:end) = dump.(propName).fieldNamesOriginal;
-         
-                    try; dump.(propName) = orderfields(dump.(propName),idx); end % This could be done better, just ignores if breaks...
 
                     % Remove the original order struct element
-                    dump.(propName) = rmfield(dump.(propName),'fieldNamesOriginal');
-                    
-                    % Remove the others we don't need
-                    % try; dump.(propName) = rmfield(dump.(propName),'LineNo'); end;
-                    % try; dump.(propName) = rmfield(dump.(propName),'TimeUS'); end;
+                    if isfield(dump,propName)
+                        dump.(propName) = rmfield(dump.(propName),'fieldNamesOriginal');
+                    end
                 end
             end
         
