@@ -21,8 +21,7 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
         FMTLen = 89;
         valid_msgheader_cell = cell(0); % A cell array for reconstructing LineNo (line-number) for all entries
         bootDatenumUTC = NaN; % The MATLAB datenum (days since Jan 00, 0000) at APM microcontroller boot (TimeUS = 0)
-
-    end %properties
+    end
     
     methods
         function obj = Ardupilog(varargin)
@@ -409,6 +408,10 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
             for fmtIdx = 1:length(fmtTypes)
                 msgId = fmtTypes(fmtIdx);
                 msgIdx = find(msgIds==msgId, 1, 'first');
+                if (isempty(msgIdx))
+                    warning('Message with id=%d does not exist in log, but its format was specified.', msgId);
+                    continue;
+                end
                 msgName = obj.msgsContained{msgIdx};
                 currentUnitIds = trimTail(unitIds(fmtIdx,:));
                 currentMultIds = trimTail(multIds(fmtIdx,:));
