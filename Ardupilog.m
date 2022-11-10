@@ -616,7 +616,9 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
     
                         % Check we actually have data in this field
                         if isempty(obj.(propName)(jj).LineNo)
-                            fprintf('\tRemoving empty field %s\n',propName);
+                            if verbose > 0
+                                fprintf('\tRemoving empty instance in field %s\n',propName);
+                            end
                             continue
                         end
     
