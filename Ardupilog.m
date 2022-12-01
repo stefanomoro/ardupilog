@@ -612,8 +612,11 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
                     % This is a LogMsgGroup
                     % Loop through as it may be instanced
                     for jj = 1:numel(obj.(propName))
+                        
+                        % Order the fields as per their original order in the log
                         subProps = properties(obj.(propName)(jj));
-    
+                        subProps(end-numel(obj.(propName)(jj).fieldNamesOriginal)+1:end) = obj.(propName)(jj).fieldNamesOriginal;
+                        
                         % Check we actually have data in this field
                         if isempty(obj.(propName)(jj).LineNo)
                             if verbose > 0
@@ -622,23 +625,12 @@ classdef Ardupilog < dynamicprops & matlab.mixin.Copyable
                             continue
                         end
     
-                        % Creat the output structure
+                        % Create the output structure
                         for j = 1:length(subProps)
                             subPropName = subProps{j};
                             dump.(propName)(jj).(subPropName) = obj.(propName)(jj).(subPropName);
                         end
-                        
-                        % Order the fields as per their original order in the log
-                        idx = fieldnames(dump.(propName)(jj));
-                        idx(end-numel(dump.(propName)(jj).fieldNamesOriginal)+1:end) = dump.(propName)(jj).fieldNamesOriginal;
-             
-                        try % This could be done better, just ignores if breaks...
-                            dump.(propName)(jj) = orderfields(dump.(propName)(jj),idx);
-                        catch
-                            % Ordering the fields failed for some reason
-                            keyboard
-                        end 
-                           
+                                                   
                     end
 
                     % Remove the original order struct element
